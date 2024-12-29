@@ -23,25 +23,29 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Ensure Gradle wrapper is executable
-      - name: Ensure Gradle Wrapper Permissions
-        run: chmod +x gradlew
-        continue-on-error: true
+      # Use Gradle Wrapper if it exists
+      - name: Check Gradle Wrapper Exists
+        id: check-wrapper
+        run: |
+          if [ -f ./gradlew ]; then
+            echo "wrapper-exists=true" >> $GITHUB_ENV
+          else
+            echo "wrapper-exists=false" >> $GITHUB_ENV
+          fi
 
-      # Run Gradle build using the wrapper
       - name: Build with Gradle Wrapper
+        if: env.wrapper-exists == 'true'
         run: ./gradlew build
-        continue-on-error: true
 
-      # If the Gradle wrapper is not available, fallback to a specific Gradle version
-      - name: Fallback to Specific Gradle Version
-        if: failure()
+      # Fallback to a specified Gradle version if the wrapper does not exist
+      - name: Setup Gradle
+        if: env.wrapper-exists == 'false'
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
       - name: Build with Specific Gradle Version
-        if: failure()
+        if: env.wrapper-exists == 'false'
         run: gradle build
 
   dependency-submission:
@@ -57,7 +61,7 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'temurin'
 
       - name: Upload Plugin Jar
